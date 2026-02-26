@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vinay DevOps Portfolio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 25px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        nav a:hover {
+            color: #ffd700;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+        }
+
+        .hero h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 18px;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            background: #ffd700;
+            color: #333;
+            font-weight: 600;
+            text-decoration: none;
+            margin: 10px;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: white;
+        }
+
+        .features {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 60px 20px;
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            color: #333;
+            width: 280px;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            color: #2a5298;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            margin-top: 50px;
+        }
+
+        @media(max-width: 768px) {
+            .hero h2 {
+                font-size: 32px;
+            }
+
+            .features {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚀 Vinay DevOps</h1>
+    <nav>
+        <a href="#">Home</a>
+        <a href="#">Projects</a>
+        <a href="#">Services</a>
+        <a href="#">Contact</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <h2>Cloud • DevOps • Automation</h2>
+    <p>
+        Helping businesses migrate, automate, and deploy scalable applications 
+        using AWS, Docker, CI/CD pipelines, and modern DevOps practices.
+    </p>
+    <a href="#" class="btn">Get Started</a>
+    <a href="#" class="btn">View Projects</a>
+</section>
+
+<section class="features">
+    <div class="card">
+        <h3>☁️ Cloud Deployment</h3>
+        <p>Deploying scalable applications on AWS EC2, RDS, Load Balancers, and S3.</p>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ CI/CD Automation</h3>
+        <p>Automating builds and deployments using Jenkins, GitHub Actions, and pipelines.</p>
+    </div>
+
+    <div class="card">
+        <h3>🐳 Containerization</h3>
+        <p>Dockerizing applications and managing containers for microservices architecture.</p>
+    </div>
+</section>
+
+<footer>
+    © 2026 Vinay Kumar | Built with ❤️ for Cloud & DevOps
+</footer>
+
+</body>
+</html>
