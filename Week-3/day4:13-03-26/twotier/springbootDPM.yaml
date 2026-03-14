@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retailsdeployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: retailsdpm
+  template:
+    metadata:
+      name: retailspod
+      labels:
+        app: retailsdpm
+    spec:
+      containers:
+      - name: retailscon
+        image: vinaykumarkondoju08/multistage:retails3
+        env:
+        - name: DB_URL
+          value: jdbc:mysql://192.168.230.6:3306/retailsdb
+        - name: DB_USERNAME
+          value: appuser
+        - name: DB_PASSWORD
+          value: password
+        ports:
+        - containerPort: 8080

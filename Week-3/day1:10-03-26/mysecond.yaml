@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: rajcosiva
+  name: rajcosiva
+spec:
+  containers:
+  - image: rajcosivadevops/ustimage:latest
+    name: rajcosiva
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: mysecondpod
+  labels: 
+    app: ustimage
+  namespace: vinay
+spec: 
+  containers:
+  - name: mycontainer
+    image: rajcosivadevops/ustimage:latest
+    ports:
+    - containerPort: 80  
+

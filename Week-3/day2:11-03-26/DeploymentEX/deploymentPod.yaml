@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind : Deployment
+metadata: 
+  name: firtdeployment
+spec:
+  replicas: 3
+  selector: 
+    matchLabels:
+      app: colours
+  template: 
+    metadata:
+      name: nginxdeploy
+      labels:
+        app: colours
+    spec:
+      containers:
+      - name: coloursdeploycon
+        image: vinaykumarkondoju08/demo:2
+        ports:
+        - containerPort: 80
+

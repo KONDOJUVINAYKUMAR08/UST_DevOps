@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: spring-app-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      name: spring-demo
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcon
+        image: vinaykumarkondoju08/spring-application:01
+        ports:
+        - containerPort: 8080
+        env:
+        - name: APP_NAME
+          value: "Spring APP"
+        - name: ENVIRONMENT
+          value: "Configmaps and Secret ENV"
+        - name: APP_MESSAGE
+          value: "HEY This is Spring app"
+        - name: DB_PASSWORD
+          value: "password1234"
+

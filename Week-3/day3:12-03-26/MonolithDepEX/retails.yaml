@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: retailspod
+  labels:
+    app: retails
+spec:
+  containers:
+  - name: retailscon
+    image: vinaykumarkondoju08/practice_img:retails1
+
