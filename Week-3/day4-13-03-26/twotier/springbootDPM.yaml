@@ -18,7 +18,7 @@ spec:
         image: vinaykumarkondoju08/multistage:retails3
         env:
         - name: DB_URL
-          value: jdbc:mysql://192.168.230.6:3306/retailsdb
+          value: jdbc:mysql://mysqlservice/retailsdb
         - name: DB_USERNAME
           value: appuser
         - name: DB_PASSWORD
