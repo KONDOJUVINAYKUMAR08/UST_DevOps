@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: app-configmap
+data:
+  REGISTRY_URL: http://registry-service
+  LOGGING_URL: http://logging-service/logs

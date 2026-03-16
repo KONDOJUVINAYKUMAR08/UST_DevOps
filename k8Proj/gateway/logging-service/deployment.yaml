@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logging-deployment
+spec:
+  replicas: 3
+  selector: 
+    matchLabels:
+      app: logging
+  template:
+    metadata:
+      name: logging-pod
+      labels:
+        app: logging
+    spec:
+      containers:
+      - name: loggingcon
+        image: vinaykumarkondoju08/meridian-logging-service:latest
+        ports:
+        - containerPort: 9000
+        env:
+        - name: PORT
+          value: "9000"
+

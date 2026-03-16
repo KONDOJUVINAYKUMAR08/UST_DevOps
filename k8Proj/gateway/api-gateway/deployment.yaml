@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: api-deployment
+spec:
+  replicas: 3
+  selector: 
+    matchLabels:
+      app: apigateway
+  template:
+    metadata: 
+      name: apipod
+      labels:
+        app: apigateway
+    spec:
+      containers:
+      - name: apigatewaycon
+        image: vinaykumarkondoju08/meridian-api-gateway:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: REGISTRY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-configmap
+              key: REGISTRY_URL
+        - name: LOGGING_URL
+          valueFrom: 
+            configMapKeyRef:
+              name: app-configmap
+              key: LOGGING_URL
+        - name: PORT
+          value: "8080"

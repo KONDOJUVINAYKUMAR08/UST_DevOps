@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: user-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      name: user-pod
+      labels:
+        app: user
+    spec: 
+      containers:
+      - name: usercon
+        image: vinaykumarkondoju08/meridian-user-service:latest
+        ports:
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: app-configmap
+        - secretRef:
+            name: postgres-secret
+        - secretRef:
+            name: app-secret
+        env:
+        - name: SERVICE_NAME
+          value: user-service
+        - name: PORT
+          value: "8081"
+        - name: DB_SCHEMA
+          value: users
+        - name: DATABASE_URL
+          value: postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service/$(POSTGRES_DB)
+
