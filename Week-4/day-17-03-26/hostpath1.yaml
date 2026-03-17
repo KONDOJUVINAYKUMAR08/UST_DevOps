@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: twoconpod
+spec:
+  containers:
+  - name: con1
+    image: busybox
+    command: ["sleep", "3600"]
+    volumeMounts:
+    - mountPath: /host-d1
+      name: host-v
+  - name: con2
+    image: busybox
+    command: ["sleep", "3600"]
+    volumeMounts:
+    - mountPath: /host-d2
+      name: host-v
+  volumes:
+  - name: host-v
+    hostPath:
+      path: /data/twocon
+      type: DirectoryOrCreate

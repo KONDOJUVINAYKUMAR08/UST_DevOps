@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-demo
+spec:
+  containers:
+  - name: app
+    image: nginx
+    volumeMounts:
+    - mountPath: /cache
+      name: scratch-space
+  volumes:
+  - name: scratch-space
+    emptyDir: {}
