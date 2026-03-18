@@ -1,0 +1,15 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-default-storage-class
+provisioner: cluster.local/dev-nfs-provisioner-nfs-subdir-external-provisioner
+
+#when the pvc is deleted, data is also deleted
+reclaimPolicy: Delete
+
+parameters:
+  # how dir should be created
+  pathPattern: "${.PVC.namespace}-${.PVC.name}"
+
+  # Works only when "reclaimPolicy: Delete" to delete the subdirectories
+  onDelete: delete
