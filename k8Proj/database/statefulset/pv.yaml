@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv-1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  hostPath:
+    path: /data/postgres1
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv-2
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  hostPath:
+    path: /data/postgres2
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv-3
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  hostPath:
+    path: /data/postgres3
