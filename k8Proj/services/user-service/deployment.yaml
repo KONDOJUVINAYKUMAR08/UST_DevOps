@@ -19,12 +19,8 @@ spec:
         ports:
         - containerPort: 8081
         envFrom:
-        - configMapRef:
-            name: app-configmap
         - secretRef:
             name: postgres-secret
-        - secretRef:
-            name: app-secret
         env:
         - name: SERVICE_NAME
           value: user-service
