@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: product-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product
+  template:
+    metadata:
+      name: product-pod
+      labels:
+        app: product
+    spec: 
+      containers:
+      - name: productcon
+        image: vinaykumarkondoju08/meridian-product-service:latest
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: app-configmap
+        - secretRef:
+            name: postgres-secret
+        - secretRef:
+            name: app-secret
+        env:
+        - name: SERVICE_NAME
+          value: product-service
+        - name: PORT
+          value: "8082"
+        - name: DB_SCHEMA
+          value: users
+        - name: DATABASE_URL
+          value: postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service/$(POSTGRES_DB)
