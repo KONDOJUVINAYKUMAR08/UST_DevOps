@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-rw-gateway
+  namespace: stat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-rw-gateway
+  template:
+    metadata:
+      labels:
+        app: mysql-rw-gateway
+    spec:
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: gateway
+          image: cazzzzz/mysql-rw-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: WRITE_DB_HOST
+              value: mysql-write
+            - name: READ_DB_HOSTS
+              value: mysql-1.mysql-headless.stat.svc.cluster.local,mysql-2.mysql-headless.stat.svc.cluster.local
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_USER
+              value: root
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: DB_NAME
+              value: appdb
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-rw-gateway
+  namespace: stat
+spec:
+  type: NodePort
+  selector:
+    app: mysql-rw-gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      nodePort: 30080
