@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: affinity-pref-multi
+  namespace: nodeaff
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 50
+        preference:
+          matchExpressions:
+          - key: env
+            operator: In
+            values:
+            - w2
+      - weight: 20
+        preference:
+          matchExpressions:
+          - key: env
+            operator: In
+            values:
+            - w1
+
+           
