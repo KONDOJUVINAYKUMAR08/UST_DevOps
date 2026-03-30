@@ -1,0 +1,308 @@
+# =============================================================================
+# MongoDB Secret
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secret
+type: Opaque
+stringData:
+  MONGO_INITDB_ROOT_USERNAME: "admin"
+  MONGO_INITDB_ROOT_PASSWORD: "mongopassword"
+---
+# =============================================================================
+# PersistentVolumes
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv-0
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /mnt/data/mongodb-0
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv-1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /mnt/data/mongodb-1
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv-2
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  hostPath:
+    path: /mnt/data/mongodb-2
+    type: DirectoryOrCreate
+---
+# =============================================================================
+# Headless Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+# =============================================================================
+# ConfigMap — Scripts
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-scripts
+data:
+  init-mongo.sh: |
+    #!/bin/bash
+    set -e
+    echo "=== Init Container ==="
+    [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+    ordinal=${BASH_REMATCH[1]}
+    echo "Pod: $HOSTNAME, Ordinal: $ordinal"
+    echo "$ordinal" > /data/config/ordinal
+    chown -R 999:999 /data/db 2>/dev/null || true
+    echo "=== Init Complete ==="
+
+  rs-configure.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "=== Sidecar Starting ==="
+    ordinal=$(cat /data/config/ordinal)
+    SELF_HOST="${HOSTNAME}.mongodb-headless:27017"
+    PRIMARY_HOST="mongodb-0.mongodb-headless:27017"
+
+    echo "Pod: $HOSTNAME, Ordinal: $ordinal"
+
+    # Wait for local mongod
+    echo "Waiting for local mongod..."
+    until mongosh --quiet --eval "db.adminCommand('ping')" 2>/dev/null; do
+      sleep 2
+    done
+    echo "Local mongod ready"
+
+    if [ "$ordinal" -eq 0 ]; then
+      echo "=== PRIMARY Configuration ==="
+
+      rs_init=$(mongosh --quiet --eval "try{rs.status().ok}catch(e){0}" 2>/dev/null || echo "0")
+
+      if [ "$rs_init" = "1" ]; then
+        echo "RS already initialized"
+      else
+        echo "Initiating RS..."
+        mongosh --quiet --eval "
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: '${SELF_HOST}', priority: 2 }]
+          });
+        "
+
+        echo "Waiting for PRIMARY election..."
+        until mongosh --quiet --eval "rs.isMaster().ismaster" 2>/dev/null | grep -q true; do
+          sleep 2
+        done
+        echo "Elected as PRIMARY"
+
+        echo "Creating user..."
+        mongosh --quiet --eval "
+          use admin;
+          try {
+            db.createUser({
+              user: '${MONGO_INITDB_ROOT_USERNAME}',
+              pwd: '${MONGO_INITDB_ROOT_PASSWORD}',
+              roles: [{ role: 'root', db: 'admin' }]
+            });
+          } catch(e) { print('User exists'); }
+        "
+
+        echo "Seeding data..."
+        mongosh --quiet --eval "
+          use shopdb;
+          if (db.products.countDocuments() === 0) {
+            db.products.insertMany([
+              { _id: 'OLJCESPC7Z', name: 'Sunglasses', price: 19.99, categories: ['accessories'] },
+              { _id: '66VCHSJNUP', name: 'Tank Top', price: 18.99, categories: ['clothing'] },
+              { _id: '1YMWWN1N4O', name: 'Watch', price: 109.99, categories: ['accessories'] },
+              { _id: 'L9ECAV7KIM', name: 'Loafers', price: 89.99, categories: ['footwear'] },
+              { _id: '2ZYFJ3GM2N', name: 'Hairdryer', price: 24.99, categories: ['beauty'] },
+              { _id: '0PUK6V6EV0', name: 'Candle Holder', price: 18.99, categories: ['home'] },
+              { _id: 'LS4PSXUNUM', name: 'Salt Shakers', price: 18.49, categories: ['kitchen'] },
+              { _id: '9SIQT8TOJO', name: 'Bamboo Jar', price: 5.49, categories: ['kitchen'] },
+              { _id: '6E92ZMYYFZ', name: 'Mug', price: 8.99, categories: ['kitchen'] }
+            ]);
+            print('Data seeded');
+          }
+        "
+      fi
+      echo "PRIMARY ready"
+
+    else
+      echo "=== SECONDARY Configuration ==="
+
+      echo "Waiting for PRIMARY..."
+      until mongosh --host "$PRIMARY_HOST" --quiet --eval "rs.isMaster().ismaster" 2>/dev/null | grep -q true; do
+        sleep 3
+      done
+
+      is_member=$(mongosh --host "$PRIMARY_HOST" --quiet --eval "
+        rs.status().members.map(m=>m.name).includes('${SELF_HOST}') ? 'yes' : 'no'
+      " 2>/dev/null || echo "no")
+
+      if [ "$is_member" = "yes" ]; then
+        echo "Already a member"
+      else
+        echo "Adding to RS..."
+        mongosh --host "$PRIMARY_HOST" --quiet --eval "rs.add('${SELF_HOST}');"
+        echo "Added successfully"
+      fi
+      echo "SECONDARY ready"
+    fi
+
+    echo "=== Sidecar idle ==="
+    sleep infinity
+---
+# =============================================================================
+# StatefulSet — No Resource Limits
+# =============================================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: mongodb-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      terminationGracePeriodSeconds: 10
+
+      initContainers:
+      - name: init-mongo
+        image: mongo:7.0
+        command: ["bash", "/scripts/init-mongo.sh"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: config
+          mountPath: /data/config
+        - name: scripts
+          mountPath: /scripts
+        - name: mongodb-data
+          mountPath: /data/db
+
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        args:
+        - "--replSet"
+        - "rs0"
+        - "--bind_ip_all"
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        livenessProbe:
+          exec:
+            command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+
+      - name: mongo-sidecar
+        image: mongo:7.0
+        command: ["bash", "/scripts/rs-configure.sh"]
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: MONGO_INITDB_ROOT_PASSWORD
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: config
+          mountPath: /data/config
+
+      volumes:
+      - name: scripts
+        configMap:
+          name: mongodb-scripts
+          defaultMode: 0755
+      - name: config
+        emptyDir: {}
+
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ""
+      resources:
+        requests:
+          storage: 1Gi
+---
+# =============================================================================
+# ClusterIP Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017

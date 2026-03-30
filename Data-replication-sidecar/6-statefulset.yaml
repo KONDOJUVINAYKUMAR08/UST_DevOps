@@ -1,0 +1,267 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: mysql-demo
+spec:
+  serviceName: mysql-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql
+  
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      terminationGracePeriodSeconds: 30
+      
+      # ════════════════════════════════════════════════════════════
+      # INIT CONTAINERS
+      # ════════════════════════════════════════════════════════════
+      initContainers:
+        
+        # ──────────────────────────────────────────────────────────
+        # INIT 1: Configure MySQL (PRIMARY or REPLICA)
+        # ──────────────────────────────────────────────────────────
+        - name: init-mysql
+          image: mysql:8.0
+          command:
+            - bash
+            - "-c"
+            - |
+              set -ex
+              
+              # Dynamic: Extract pod index from hostname
+              POD_INDEX=${HOSTNAME##*-}
+              SERVER_ID=$((100 + POD_INDEX))
+              
+              echo "============================================"
+              echo "Pod: $HOSTNAME | Index: $POD_INDEX | ServerID: $SERVER_ID"
+              echo "============================================"
+              
+              # Dynamic: Configure based on index
+              if [ "$POD_INDEX" -eq 0 ]; then
+                  echo "Configuring as PRIMARY"
+                  cp /mnt/config-map/primary.cnf /mnt/conf.d/server.cnf
+              else
+                  echo "Configuring as REPLICA"
+                  cp /mnt/config-map/replica.cnf /mnt/conf.d/server.cnf
+              fi
+              
+              echo "server-id=$SERVER_ID" >> /mnt/conf.d/server.cnf
+              cat /mnt/conf.d/server.cnf
+          volumeMounts:
+            - name: config-map
+              mountPath: /mnt/config-map
+            - name: conf
+              mountPath: /mnt/conf.d
+
+        # ──────────────────────────────────────────────────────────
+        # INIT 2: Clone Data from Previous Pod
+        # Uses debian image which has apt-get!
+        # ──────────────────────────────────────────────────────────
+        - name: clone-mysql
+          image: debian:bullseye-slim
+          command:
+            - bash
+            - "-c"
+            - |
+              set -ex
+              
+              POD_INDEX=${HOSTNAME##*-}
+              
+              echo "============================================"
+              echo "Clone Init Container | Pod Index: $POD_INDEX"
+              echo "============================================"
+              
+              # Skip if data exists
+              if [ -f /var/lib/mysql/mysql.ibd ]; then
+                  echo "Data already exists, skipping clone"
+                  exit 0
+              fi
+              
+              # PRIMARY doesn't clone
+              if [ "$POD_INDEX" -eq 0 ]; then
+                  echo "PRIMARY pod - no clone needed"
+                  exit 0
+              fi
+              
+              # Install required tools
+              echo "Installing tools..."
+              apt-get update -qq
+              apt-get install -qq -y netcat-openbsd wget lsb-release gnupg2 curl
+              
+              # Install XtraBackup
+              echo "Installing XtraBackup..."
+              curl -sSL https://repo.percona.com/apt/percona-release_latest.bullseye_all.deb -o /tmp/percona.deb
+              dpkg -i /tmp/percona.deb
+              apt-get update -qq
+              percona-release enable-only tools release
+              apt-get update -qq
+              apt-get install -qq -y percona-xtrabackup-80
+              
+              # Calculate clone source
+              PREV=$((POD_INDEX - 1))
+              SOURCE="mysql-${PREV}.mysql-headless.mysql-demo.svc.cluster.local"
+              
+              echo "Clone source: $SOURCE:3307"
+              echo "Waiting for source to be ready..."
+              
+              # Wait for source sidecar
+              RETRY=0
+              while ! nc -z -w3 "$SOURCE" 3307 2>/dev/null; do
+                  RETRY=$((RETRY + 1))
+                  if [ $RETRY -ge 120 ]; then
+                      echo "ERROR: Timeout waiting for $SOURCE:3307"
+                      exit 1
+                  fi
+                  echo "Waiting... ($RETRY/120)"
+                  sleep 3
+              done
+              
+              echo "Source ready! Cloning..."
+              nc -w 300 "$SOURCE" 3307 | xbstream -x -C /var/lib/mysql
+              
+              echo "Preparing backup..."
+              xtrabackup --prepare --target-dir=/var/lib/mysql
+              
+              echo "Clone complete!"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+
+      # ════════════════════════════════════════════════════════════
+      # MAIN CONTAINERS
+      # ════════════════════════════════════════════════════════════
+      containers:
+        
+        # ──────────────────────────────────────────────────────────
+        # MySQL Server
+        # ──────────────────────────────────────────────────────────
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+
+        # ──────────────────────────────────────────────────────────
+        # SIDECAR: XtraBackup Server
+        # Uses debian image which has apt-get!
+        # ──────────────────────────────────────────────────────────
+        - name: xtrabackup
+          image: debian:bullseye-slim
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 3307
+          command:
+            - bash
+            - "-c"
+            - |
+              set -e
+              
+              echo "============================================"
+              echo "SIDECAR: Installing tools..."
+              echo "============================================"
+              
+              # Install tools
+              apt-get update -qq
+              apt-get install -qq -y netcat-openbsd wget lsb-release gnupg2 curl procps
+              
+              # Install XtraBackup
+              echo "Installing XtraBackup..."
+              curl -sSL https://repo.percona.com/apt/percona-release_latest.bullseye_all.deb -o /tmp/percona.deb
+              dpkg -i /tmp/percona.deb
+              apt-get update -qq
+              percona-release enable-only tools release
+              apt-get update -qq
+              apt-get install -qq -y percona-xtrabackup-80
+              
+              echo "============================================"
+              echo "SIDECAR: Ready to serve backups on port 3307"
+              echo "============================================"
+              
+              cd /var/lib/mysql
+              
+              # Wait for MySQL to be ready
+              echo "Waiting for MySQL to start..."
+              while ! [ -S /var/lib/mysql/mysql.sock ] && ! [ -f /var/lib/mysql/mysql.pid ]; do
+                  sleep 5
+                  echo "Waiting for MySQL..."
+              done
+              sleep 10
+              
+              echo "MySQL is ready. Starting backup server..."
+              
+              # Serve backups on port 3307
+              while true; do
+                  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Waiting for backup request on port 3307..."
+                  
+                  # Run xtrabackup and pipe to nc
+                  # nc -l: listen mode
+                  # -p 3307: port 3307
+                  # -q 1: quit after 1 second of no data
+                  (
+                      xtrabackup --backup \
+                          --slave-info \
+                          --stream=xbstream \
+                          --host=127.0.0.1 \
+                          --user=root \
+                          --password="$MYSQL_ROOT_PASSWORD" 2>/dev/null
+                  ) | nc -l -p 3307 -q 1 || true
+                  
+                  sleep 2
+              done
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+      # ════════════════════════════════════════════════════════════
+      # VOLUMES
+      # ════════════════════════════════════════════════════════════
+      volumes:
+        - name: config-map
+          configMap:
+            name: mysql-config
+            defaultMode: 0755
+        - name: conf
+          emptyDir: {}
+
+  # ════════════════════════════════════════════════════════════════
+  # VOLUME CLAIM TEMPLATES
+  # ════════════════════════════════════════════════════════════════
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ""
+        resources:
+          requests:
+            storage: 5Gi
