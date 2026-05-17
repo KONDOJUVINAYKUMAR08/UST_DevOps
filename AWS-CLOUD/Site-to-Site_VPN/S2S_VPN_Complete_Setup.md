@@ -886,5 +886,3 @@ Achieved:
 * End-to-end communication between:
   192.168.1.x ↔ 10.10.2.x
 
-```
-```
