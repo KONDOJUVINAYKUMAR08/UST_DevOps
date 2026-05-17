@@ -1,4 +1,3 @@
-````md id="awsvpn001"
 # AWS Site-to-Site VPN using pfSense and VMware
 # Complete Hybrid Cloud Networking Lab Guide
 
