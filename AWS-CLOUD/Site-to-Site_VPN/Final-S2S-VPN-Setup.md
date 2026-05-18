@@ -488,24 +488,41 @@ Check IP:
 
 ```bash
 ip a
+````
 
 Expected:
 192.168.1.x
 
-Ping pfSense
+---
+
+# Ping pfSense
+
+```bash
 ping 192.168.1.1
-Ping Internet
+```
+
+---
+
+# Ping Internet
+
+```bash
 ping google.com
+```
 
 If successful:
 pfSense routing works correctly.
 
-PHASE 4 — FIND PUBLIC IP
-STEP 31 — Find Public IP
+---
+
+# PHASE 4 — FIND PUBLIC IP
+
+# STEP 31 — Find Public IP
 
 Run:
 
+```bash
 curl ifconfig.me
+```
 
 Example:
 223.188.100.106
@@ -513,30 +530,40 @@ Example:
 IMPORTANT:
 AWS uses this IP to create VPN tunnel.
 
-IMPORTANT CGNAT CHECK
+---
+
+# IMPORTANT CGNAT CHECK
 
 Reconnect hotspot and verify IP remains same.
 
 If IP changes:
 VPN may break after reconnect.
 
-PHASE 5 — AWS NETWORK SETUP
-STEP 32 — Login to AWS Console
+---
 
-https://console.aws.amazon.com
+# PHASE 5 — AWS NETWORK SETUP
+
+# STEP 32 — Login to AWS Console
+
+[https://console.aws.amazon.com](https://console.aws.amazon.com)
 
 Select Region:
 ap-south-1 (Mumbai)
 
-STEP 33 — Create VPC
+---
+
+# STEP 33 — Create VPC
 
 VPC → Your VPCs → Create VPC
 
 Settings:
 
-Name: demo-vpc
-CIDR: 10.10.0.0/16
-STEP 34 — Create Public Subnet
+* Name: demo-vpc
+* CIDR: 10.10.0.0/16
+
+---
+
+# STEP 34 — Create Public Subnet
 
 CIDR:
 10.10.1.0/24
@@ -544,7 +571,9 @@ CIDR:
 Name:
 public-subnet
 
-STEP 35 — Create Private Subnet
+---
+
+# STEP 35 — Create Private Subnet
 
 CIDR:
 10.10.2.0/24
@@ -552,7 +581,9 @@ CIDR:
 Name:
 private-subnet
 
-STEP 36 — Create Internet Gateway
+---
+
+# STEP 36 — Create Internet Gateway
 
 Name:
 demo-igw
@@ -560,7 +591,9 @@ demo-igw
 Attach to:
 demo-vpc
 
-STEP 37 — Create Public Route Table
+---
+
+# STEP 37 — Create Public Route Table
 
 Name:
 public-rt
@@ -571,8 +604,11 @@ Add Route:
 Associate:
 public-subnet
 
-PHASE 6 — CREATE AWS VPN COMPONENTS
-STEP 38 — Create Virtual Private Gateway
+---
+
+# PHASE 6 — CREATE AWS VPN COMPONENTS
+
+# STEP 38 — Create Virtual Private Gateway
 
 VPC → Virtual Private Gateways
 
@@ -582,29 +618,33 @@ demo-vgw
 Attach to:
 demo-vpc
 
-STEP 39 — Create Customer Gateway
+---
+
+# STEP 39 — Create Customer Gateway
 
 VPC → Customer Gateways
 
 Settings:
 
-Name: demo-cgw
-Routing: Static
-IP Address: YOUR PUBLIC IP
+* Name: demo-cgw
+* Routing: Static
+* IP Address: YOUR PUBLIC IP
 
 Example:
 223.188.100.106
 
-STEP 40 — Create Site-to-Site VPN
+---
+
+# STEP 40 — Create Site-to-Site VPN
 
 VPC → Site-to-Site VPN Connections
 
 Settings:
 
-Name: demo-vpn
-Target Gateway: demo-vgw
-Customer Gateway: demo-cgw
-Routing: Static
+* Name: demo-vpn
+* Target Gateway: demo-vgw
+* Customer Gateway: demo-cgw
+* Routing: Static
 
 Static Route:
 192.168.1.0/24
@@ -613,79 +653,98 @@ IMPORTANT:
 Without this route:
 Tunnel may come UP but traffic fails.
 
-STEP 41 — Download VPN Configuration
+---
+
+# STEP 41 — Download VPN Configuration
 
 Select:
 
-Vendor: pfSense
-Platform: pfSense
-Software: pfSense 2.2.5+ (GUI)
+* Vendor: pfSense
+* Platform: pfSense
+* Software: pfSense 2.2.5+ (GUI)
 
 Download configuration file.
 
 IMPORTANT:
 This file contains:
 
-Tunnel IPs
-PSK keys
-Encryption settings
-PHASE 7 — CREATE PRIVATE EC2 INSTANCE
-STEP 42 — Launch EC2
+* Tunnel IPs
+* PSK keys
+* Encryption settings
+
+---
+
+# PHASE 7 — CREATE PRIVATE EC2 INSTANCE
+
+# STEP 42 — Launch EC2
 
 EC2 → Launch Instance
 
 Settings:
 
-Name: private-ec2
-AMI: Amazon Linux 2023
-Instance Type: t2.micro
-STEP 43 — Create Key Pair
+* Name: private-ec2
+* AMI: Amazon Linux 2023
+* Instance Type: t2.micro
+
+---
+
+# STEP 43 — Create Key Pair
 
 Create:
 
-Name: demo-key
-Type: RSA
-Format: .pem
+* Name: demo-key
+* Type: RSA
+* Format: .pem
 
 Download safely.
 
-STEP 44 — Network Configuration
+---
+
+# STEP 44 — Network Configuration
 
 Settings:
 
-VPC: demo-vpc
-Subnet: private-subnet
-Auto Public IP: DISABLE
+* VPC: demo-vpc
+* Subnet: private-subnet
+* Auto Public IP: DISABLE
 
 IMPORTANT:
 EC2 must NOT have public IP.
 
-STEP 45 — Create Security Group
+---
+
+# STEP 45 — Create Security Group
 
 Name:
 private-ec2-sg
 
 Inbound Rules:
 
-ICMP
-Source:
-192.168.1.0/24
-SSH
-Port:
-22
+1. ICMP
+   Source:
+   192.168.1.0/24
+
+2. SSH
+   Port:
+   22
 
 Source:
 192.168.1.0/24
 
-STEP 46 — Note EC2 Private IP
+---
+
+# STEP 46 — Note EC2 Private IP
 
 Example:
 10.10.2.80
 
 You will ping this from Ubuntu VM.
 
-PHASE 8 — CONFIGURE IPSec IN pfSense
-STEP 47 — Enable NAT Traversal
+---
+
+# PHASE 8 — CONFIGURE IPSec IN pfSense
+
+# STEP 47 — Enable NAT Traversal
 
 pfSense:
 VPN → IPsec → Advanced Settings
@@ -698,36 +757,41 @@ Save.
 IMPORTANT:
 Required because:
 
-VMware NAT
-Mobile hotspot
-Double NAT environment
-STEP 48 — Configure Phase 1
+* VMware NAT
+* Mobile hotspot
+* Double NAT environment
+
+---
+
+# STEP 48 — Configure Phase 1
 
 pfSense:
 VPN → IPsec → Add P1
 
 General:
 
-Key Exchange: IKEv1
-Interface: WAN
-Remote Gateway:
-Tunnel 1 Outside IP from AWS config
+* Key Exchange: IKEv1
+* Interface: WAN
+* Remote Gateway:
+  Tunnel 1 Outside IP from AWS config
 
 Authentication:
 
-Mutual PSK
-PSK:
-Copy from AWS config
+* Mutual PSK
+* PSK:
+  Copy from AWS config
 
 Algorithms:
 
-AES128
-SHA1
-DH Group 2
+* AES128
+* SHA1
+* DH Group 2
 
 Save.
 
-STEP 49 — Configure Phase 2
+---
+
+# STEP 49 — Configure Phase 2
 
 Add P2.
 
@@ -739,30 +803,36 @@ Remote Network:
 
 Algorithms:
 
-ESP
-AES128
-SHA1
+* ESP
+* AES128
+* SHA1
 
 Save.
 Apply Changes.
 
-PHASE 9 — FIREWALL RULES
-STEP 50 — Add IPsec Rule
+---
+
+# PHASE 9 — FIREWALL RULES
+
+# STEP 50 — Add IPsec Rule
 
 Firewall → Rules → IPsec
 
 Add:
 
-Action: Pass
-Protocol: Any
-Source: Any
-Destination: Any
+* Action: Pass
+* Protocol: Any
+* Source: Any
+* Destination: Any
 
 Save.
 Apply Changes.
 
-PHASE 10 — AWS ROUTING
-STEP 51 — Create Private Route Table
+---
+
+# PHASE 10 — AWS ROUTING
+
+# STEP 51 — Create Private Route Table
 
 Name:
 private-rt
@@ -770,7 +840,9 @@ private-rt
 Associate:
 private-subnet
 
-STEP 52 — Add VPN Route
+---
+
+# STEP 52 — Add VPN Route
 
 Destination:
 192.168.1.0/24
@@ -782,15 +854,20 @@ IMPORTANT:
 Without this route:
 Traffic fails.
 
-STEP 53 — Enable Route Propagation
+---
+
+# STEP 53 — Enable Route Propagation
 
 Route Table → Route Propagation
 
 Enable:
 demo-vgw
 
-PHASE 11 — BRING UP VPN TUNNEL
-STEP 54 — Connect Tunnel
+---
+
+# PHASE 11 — BRING UP VPN TUNNEL
+
+# STEP 54 — Connect Tunnel
 
 pfSense:
 Status → IPsec
@@ -804,7 +881,9 @@ Wait:
 Expected:
 Tunnel Status = ESTABLISHED
 
-STEP 55 — Verify AWS Tunnel
+---
+
+# STEP 55 — Verify AWS Tunnel
 
 AWS:
 VPN Connections → Tunnel Details
@@ -812,20 +891,33 @@ VPN Connections → Tunnel Details
 Expected:
 Tunnel 1 = UP
 
-PHASE 12 — TEST CONNECTIVITY
-STEP 56 — Ping EC2 from Ubuntu
+---
+
+# PHASE 12 — TEST CONNECTIVITY
+
+# STEP 56 — Ping EC2 from Ubuntu
+
+```bash
 ping 10.10.2.80
+```
 
 Expected:
 Successful replies.
 
-STEP 57 — SSH into EC2
+---
+
+# STEP 57 — SSH into EC2
+
+```bash
 ssh -i demo-key.pem ec2-user@10.10.2.80
+```
 
 IMPORTANT:
 .pem file must exist in Ubuntu VM.
 
-SUCCESSFUL TRAFFIC FLOW
+---
+
+# SUCCESSFUL TRAFFIC FLOW
 
 Ubuntu VM
 ↓
@@ -839,19 +931,26 @@ AWS Route Table
 ↓
 Private EC2
 
-WHAT STUDENTS LEARN
-Hybrid Cloud Networking
-AWS Site-to-Site VPN
-IPSec
-Routing
-Firewalls
-AWS Networking
-Security Groups
-Route Tables
-VPN Troubleshooting
-Enterprise Architecture
-ISSUES FACED DURING SETUP
-1. pfSense Installation Failed
+---
+
+# WHAT STUDENTS LEARN
+
+* Hybrid Cloud Networking
+* AWS Site-to-Site VPN
+* IPSec
+* Routing
+* Firewalls
+* AWS Networking
+* Security Groups
+* Route Tables
+* VPN Troubleshooting
+* Enterprise Architecture
+
+---
+
+# ISSUES FACED DURING SETUP
+
+# 1. pfSense Installation Failed
 
 Error:
 pkg-static failed to fetch
@@ -862,7 +961,9 @@ ISO disconnected during installation.
 Solution:
 Keep ISO connected until installation completes.
 
-2. pfSense Boot Loop
+---
+
+# 2. pfSense Boot Loop
 
 Reason:
 ISO still connected after installation.
@@ -870,7 +971,9 @@ ISO still connected after installation.
 Solution:
 Disconnect CD/DVD after installation.
 
-3. Ubuntu Internet Not Working
+---
+
+# 3. Ubuntu Internet Not Working
 
 Reason:
 Wrong network adapter selected.
@@ -878,7 +981,9 @@ Wrong network adapter selected.
 Solution:
 Connect Ubuntu VM to VMnet2.
 
-4. Tunnel UP But Ping Failed
+---
+
+# 4. Tunnel UP But Ping Failed
 
 Reason:
 Missing static route:
@@ -887,21 +992,26 @@ Missing static route:
 Solution:
 Add:
 
-Static route in VPN Connection
-Route in private route table
-5. VPN Tunnel Failed Initially
+* Static route in VPN Connection
+* Route in private route table
+
+---
+
+# 5. VPN Tunnel Failed Initially
 
 Possible causes:
 
-Wrong PSK
-Wrong tunnel IP
-NAT Traversal disabled
-Mobile hotspot NAT
+* Wrong PSK
+* Wrong tunnel IP
+* NAT Traversal disabled
+* Mobile hotspot NAT
 
 Solution:
 Enable NAT Traversal = Auto
 
-6. Security Group Blocking Traffic
+---
+
+# 6. Security Group Blocking Traffic
 
 Reason:
 ICMP and SSH not allowed.
@@ -909,11 +1019,14 @@ ICMP and SSH not allowed.
 Solution:
 Allow:
 
-ICMP
-SSH
-from:
-192.168.1.0/24
-FINAL RESULT
+* ICMP
+* SSH
+  from:
+  192.168.1.0/24
+
+---
+
+# FINAL RESULT
 
 Successfully implemented:
 AWS Site-to-Site VPN using pfSense firewall
@@ -922,8 +1035,11 @@ with AWS VPC through encrypted IPSec tunnel.
 
 Achieved:
 
-Secure Hybrid Cloud Connectivity
-Private Communication
-Enterprise Networking
-End-to-End Routing
-Real-world VPN Architecture
+* Secure Hybrid Cloud Connectivity
+* Private Communication
+* Enterprise Networking
+* End-to-End Routing
+* Real-world VPN Architecture
+
+```
+```
