@@ -1,0 +1,23 @@
+terraform {
+    required_providers {
+        aws = {
+            source = "registry.terraform.io/hashicorp/aws"
+            version = "~> 6.0"
+        }
+    }
+}
+
+provider "aws" {
+    region = var.aws_region
+}
+
+
+module "prod_vpc" {
+    source = "../../modules/vpc"
+
+    vpc_name = "prod"
+    vpc_cidr = "10.10.0.0/16"
+    public_subnet_cidr = "10.10.1.0/24"
+    private_subnet_cidr = "10.10.2.0/24"
+    environment = "prod"
+}
